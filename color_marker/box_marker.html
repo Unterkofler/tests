@@ -1,0 +1,150 @@
+<html>
+<head>
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.0.8/aframe/build/aframe-ar.js"></script>
+  <style>
+    #scoreBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background-color: #333;
+      color: white;
+      font-size: 20px;
+      text-align: center;
+      line-height: 50px;
+    }
+    .transparent {
+      opacity: 0.5;
+    }
+  </style>
+  <script>
+    var score = 0; // Anfangspunktestand
+    var answered = {}; // Objekt, um den Antwortstatus für jedes Objekt zu speichern
+    var startDialogShown = false; // Flag, um zu überprüfen, ob der Startdialog gezeigt wurde
+
+    AFRAME.registerComponent('change-color-and-show-dialog', {
+      init: function () {
+        var el = this.el;  // Referenz zum aktuellen Element
+        el.classList.add('transparent'); // Objekte transparent machen
+
+        // Startdialog anzeigen, wenn Seite geladen wird
+        if (!startDialogShown) {
+          showStartDialog();
+        }
+
+        // Festlegen der spezifischen Frage für jedes Objekt
+        var questions = {
+          box: {
+            question: "Was ist 2+2?",
+            answers: ["3", "4", "5", "6"],
+            correctAnswer: "4"
+          },
+          sphere: {
+            question: "Was ist die Hauptstadt von Frankreich?",
+            answers: ["London", "Rom", "Paris", "Berlin"],
+            correctAnswer: "Paris"
+          },
+          cylinder: {
+            question: "Wie viele Ecken hat ein Würfel?",
+            answers: ["4", "6", "8", "12"],
+            correctAnswer: "8"
+          }
+        };
+
+        el.addEventListener('click', function () {
+          // Zeigen Sie den Dialog mit der spezifischen Frage für dieses Objekt an
+          if (!answered[el.id] || !answered[el.id].answered) {
+            showDialog(questions[el.id]);
+          }
+        });
+
+        function showDialog(questionObj) {
+          var dialogHTML = `
+            <div id="dialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+              <h2>Frage:</h2>
+              <p>${questionObj.question}</p>
+              <ul>
+                ${questionObj.answers.map(answer => `<li><button onclick="checkAnswer('${answer}', '${questionObj.correctAnswer}', '${el.id}')">${answer}</button></li>`).join('')}
+              </ul>
+            </div>
+          `;
+          document.body.insertAdjacentHTML('beforeend', dialogHTML);
+        }
+
+        // Funktion zum Überprüfen der Antwort
+        window.checkAnswer = function (selectedAnswer, correctAnswer, objectId) {
+          if (!answered[objectId]) {
+            answered[objectId] = { answered: true };
+          }
+          if (selectedAnswer === correctAnswer) {
+            score++; // Erhöhe den Punktestand um 1, wenn die Antwort richtig ist
+          }
+
+          var obj = document.getElementById(objectId);
+          obj.setAttribute('material', 'opacity', 0.5);
+          updateScore(); // Aktualisiere den Punktestand
+          closeDialog();
+        };
+
+        // Funktion zum Schließen des Dialogs
+        function closeDialog() {
+          var dialog = document.getElementById('dialog');
+          dialog.parentNode.removeChild(dialog);
+        }
+
+        // Funktion zum Aktualisieren des Punktestands
+        function updateScore() {
+          var scoreElement = document.getElementById('score');
+          scoreElement.textContent = "Punktestand: " + score;
+        }
+
+        // Startdialog anzeigen
+        function showStartDialog() {
+          startDialogShown = true;
+          var startDialogHTML = `
+            <div id="startDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+              <h2>Spielanleitung:</h2>
+              <p>Hier kommt die Spielanleitung hin.</p>
+              <button onclick="startGame()">OK</button>
+            </div>
+          `;
+          document.body.insertAdjacentHTML('beforeend', startDialogHTML);
+        }
+
+        // Spiel starten, nachdem der Startdialog bestätigt wurde
+        window.startGame = function () {
+          var startDialog = document.getElementById('startDialog');
+          startDialog.parentNode.removeChild(startDialog);
+        };
+      }
+    });
+  </script>
+</head>
+<body>
+<div id="scoreBar"> <!-- Score-Bar am oberen Rand -->
+  <span id="score">Punktestand: 0</span>
+</div>
+<a-scene embedded arjs='sourceType: webcam;'>
+  <!-- Benutzerdefinierte Marker -->
+  <a-marker id="marker1" type="pattern" url="marker\pattern-C_Marker.patt">
+    <!-- Platzieren Sie das virtuelle Objekt innerhalb dieses Markers -->
+    <a-box id="box" position="0 0.5 0" color="red" change-color-and-show-dialog class="raycastable"></a-box>
+  </a-marker>
+  <a-marker id="marker2" type="pattern" url="marker\pattern-B_Marker.patt">
+    <!-- Platzieren Sie ein anderes virtuelles Objekt innerhalb dieses Markers -->
+    <a-sphere id="sphere" position="0 0.5 0" radius="0.5" color="blue" change-color-and-show-dialog class="raycastable"></a-sphere>
+  </a-marker>
+  <a-marker id="marker3" type="pattern" url="marker\pattern-A_Marker.patt">
+    <!-- Platzieren Sie ein anderes virtuelles Objekt innerhalb dieses Markers -->
+    <a-cylinder id="cylinder" position="0 0.5 0" radius="0.5" height="1" color="yellow" change-color-and-show-dialog class="raycastable"></a-cylinder>
+  </a-marker>
+
+  <!-- Kamera mit Cursor und Raycaster -->
+  <a-camera raycaster="objects: .raycastable">
+    <a-cursor></a-cursor>
+  </a-camera>
+</a-scene>
+</body>
+</html>
